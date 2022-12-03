@@ -1,4 +1,5 @@
 import pyautogui
+from textCapture import *
 from pynput import mouse
 
 tmpx = tmpy = 0
@@ -31,16 +32,18 @@ def get_coord(m=None):
         if res == 'x': exit(1)
 
 def main():
+    calls = 0
     x1, y1 = get_coord('\nSelect region 1')
     x2, y2 = get_coord('\nSelect region 2')
     
-    im = im_to_check = pyautogui.screenshot(region=(x1, y1, x2, y2))
+    im = im_to_check = pyautogui.screenshot(region=(x1, y1, x2-x1, y2-y1))
 
     while True:
-        im_to_check = pyautogui.screenshot(region=(x1, y1, x2, y2))
+        im_to_check = pyautogui.screenshot(region=(x1, y1, x2-x1, y2-y1))
         if (list(im.getdata()) != list(im_to_check.getdata())):
             # pass im as an argument to some function to process image result
-            print('Screen changed: Call a function')
+            calls += 1
+            getImage(im_to_check, calls)
 
         im = im_to_check
 

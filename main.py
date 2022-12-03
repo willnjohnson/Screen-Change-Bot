@@ -1,6 +1,8 @@
 import pyautogui
+from selectRegion import *
 from textCapture import *
 from pynput import mouse
+import subprocess, threading
 
 tmpx = tmpy = 0
 
@@ -22,20 +24,30 @@ def set_xy(tmpx, tmpy):
     print(f'Position set: ({tmpx}, {tmpy})')
     return tmpx, tmpy
 
-def get_coord(m=None):
+def get_coord(msg=None):
     while True:
-        if m: print(m)
+        if msg: print(msg)
         call_listener()
         x, y = set_xy(tmpx, tmpy)
         res = input('Confirm (y/n/) or Exit (x): ')
         if res == 'y': return x, y
         if res == 'x': exit(1)
 
+def sel_region(x1, y1, x2, y2):
+    subprocess.call(f"python3 selectRegion.py {x1} {y1} {x2} {y2}", shell=False)
+
 def main():
     calls = 0
-    x1, y1 = get_coord('\nSelect region 1')
-    x2, y2 = get_coord('\nSelect region 2')
+    while True:
+        x1, y1 = get_coord('\nSelect region 1 (top-left corner)')
+        x2, y2 = get_coord('\nSelect region 2 (bottom-right corner)')
+
+        if x2 < x1 or y2 < y1:
+            print('\nRegion UNKNOWN. Try again!')
+        else: break
     
+    thread = threading.Thread(target=sel_region, args=(x1, y1, x2, y2)).start()
+
     im = im_to_check = pyautogui.screenshot(region=(x1, y1, x2-x1, y2-y1))
 
     while True:
@@ -43,7 +55,7 @@ def main():
         if (list(im.getdata()) != list(im_to_check.getdata())):
             # pass im as an argument to some function to process image result
             calls += 1
-            getImage(im_to_check, calls)
+            get_image(im_to_check, calls)
 
         im = im_to_check
 

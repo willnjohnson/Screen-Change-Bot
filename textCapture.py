@@ -2,8 +2,6 @@ import tempfile, os, json
 from PIL import Image
 from pytesseract import pytesseract
 
-global image_counter
-
 try:
     if os.name == 'nt':
         with open('config.json', 'r') as f:

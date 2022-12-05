@@ -40,6 +40,7 @@ class Region(QMainWindow):
 
         self.setFixedSize(x2-x1, y2-y1)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.move(x1, y1) # top-left
 

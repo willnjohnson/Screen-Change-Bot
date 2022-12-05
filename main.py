@@ -1,8 +1,9 @@
-import pyautogui
-from selectRegion import *
+import sys, pyautogui, threading
 from textCapture import *
+from processText import *
 from pynput import mouse
-import subprocess, threading
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QAction
 
 tmpx = tmpy = 0
 
@@ -32,32 +33,63 @@ def get_coord(msg=None):
         res = input('Confirm (y/n/) or Exit (x): ')
         if res == 'y': return x, y
         if res == 'x': exit(1)
+        
+class Region(QMainWindow):
+    def __init__(self, x1, y1, x2, y2):
+        super().__init__()
 
-def sel_region(x1, y1, x2, y2):
-    subprocess.call(f"python3 selectRegion.py {x1} {y1} {x2} {y2}", shell=False)
+        self.setFixedSize(x2-x1, y2-y1)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.move(x1, y1) # top-left
 
-def main():
-    calls = 0
-    while True:
-        x1, y1 = get_coord('\nSelect region 1 (top-left corner)')
-        x2, y2 = get_coord('\nSelect region 2 (bottom-right corner)')
+        widget = QWidget(self);
+        widget.setStyleSheet("background-color: rgba(255, 255, 255, 0); border: 2px solid qlineargradient(x1:0, y1:0, x2:1, y2:1, stop: 0 yellow, stop: 1 red);")
+        self.setCentralWidget(widget)
+        self.show()
+        
+        self.finish = QAction("Quit", self)
+        self.finish.triggered.connect(self.closeEvent)
 
-        if x2 < x1 or y2 < y1:
-            print('\nRegion UNKNOWN. Try again!')
-        else: break
-    
-    thread = threading.Thread(target=sel_region, args=(x1, y1, x2, y2)).start()
+        self.t1 = threading.Thread(target=self.run)
+        self.t1.start()
 
-    im = im_to_check = pyautogui.screenshot(region=(x1, y1, x2-x1, y2-y1))
+    def closeEvent(self, e):
+        try:
+            self.isFound = True
+            self.isClose = True
+            self.t1.join()
+        except: pass
+        print('Closed!')
 
-    while True:
-        im_to_check = pyautogui.screenshot(region=(x1, y1, x2-x1, y2-y1))
-        if (list(im.getdata()) != list(im_to_check.getdata())):
-            # pass im as an argument to some function to process image result
-            calls += 1
-            get_image(im_to_check, calls)
+    def run(self):
+        self.isClose = False
+        while True:
+            calls = 0
+            self.isFound = False
+            im1 = im2 = pyautogui.screenshot(region=(x1, y1, x2-x1, y2-y1))
 
-        im = im_to_check
+            while not self.isFound:
+                im2 = pyautogui.screenshot(region=(x1, y1, x2-x1, y2-y1))
+                if (list(im1.getdata()) != list(im2.getdata())):
+                    text = get_image(im2)
+                    self.isFound = processText(text)
 
-if __name__ == "__main__":
-    main()
+                im1 = im2
+
+            if self.isClose: break
+            res = input('Run again (y/n): ')
+            if res != 'y': self.close() ; break
+
+if __name__ == '__main__':
+    x1, y1 = get_coord('\nSelect region 1')
+    x2, y2 = get_coord('\nSelect region 2')
+
+    if x2 < x1: x1, x2 = x2, x1
+    if y2 < y1: y1, y2 = y2, y1
+
+    app = QApplication(sys.argv)
+
+    ex = Region(x1, y1, x2, y2)
+
+    sys.exit(app.exec_())
